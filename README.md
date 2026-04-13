@@ -1,6 +1,6 @@
 #  Leva – Transporte Colaborativo de Encomendas
 
-Aplicação web desenvolvida como Trabalho de Graduação (TG) no curso de Sistemas de Informação da Universidade Federal de Santa Maria (UFSM).
+Aplicação web desenvolvida como Trabalho de Conclusão de Curso (TCC) no curso de Sistemas de Informação da Universidade Federal de Santa Maria (UFSM).
 
 O **Leva** é uma plataforma colaborativa, sem fins lucrativos, que conecta usuários que desejam enviar encomendas com pessoas que já realizarão determinados trajetos, otimizando deslocamentos e promovendo economia e sustentabilidade.
 
