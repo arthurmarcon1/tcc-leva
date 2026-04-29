@@ -173,7 +173,7 @@ export default function Auth() {
       </motion.div>
 
       <p className="text-center text-xs text-muted-foreground py-6">
-        Leva v1.0.0 • Feito com 💚 pela comunidade
+        Leva v1.0.0 &copy; 2026 - Desenvolvido por [Arthur Marcon]
       </p>
     </div>
   );
