@@ -16,6 +16,7 @@ import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import ProfileVerification from "./pages/ProfileVerification";
 import HelpSupport from "./pages/HelpSupport";
+import TripDetail from "./pages/TripDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const AppRoutes = () => (
     <Route path="/profile/verification" element={<ProtectedRoute><ProfileVerification /></ProtectedRoute>} />
     <Route path="/profile/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
     <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+    <Route path="/trip/:id" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
