@@ -11,6 +11,7 @@ import {
   ArrowRight,
   MessageCircle,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { TripRequestsBell } from "@/components/TripRequestsBell";
 import { Header } from "@/components/Header";
@@ -164,7 +165,7 @@ export default function Index() {
                 </div>
                 <div className="space-y-2.5">
                   {(activeTrip ? upcomingTrips : upcomingTrips.slice(1)).map((trip) => (
-                    <UpcomingTripRow key={trip.id} trip={trip} navigate={navigate} />
+                    <UpcomingTripRow key={trip.id} trip={trip} navigate={navigate} onCancelled={fetchTrips} />
                   ))}
                 </div>
               </motion.section>
@@ -313,34 +314,88 @@ function ActiveTripCard({
 }
 
 /* ─────────── Upcoming Trip Row ─────────── */
-function UpcomingTripRow({ trip, navigate }: { trip: Trip; navigate: ReturnType<typeof useNavigate> }) {
+function UpcomingTripRow({
+  trip,
+  navigate,
+  onCancelled,
+}: {
+  trip: Trip;
+  navigate: ReturnType<typeof useNavigate>;
+  onCancelled: () => void;
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleCancel = async () => {
+    const { error } = await supabase
+      .from("trips")
+      .update({ status: "cancelled" })
+      .eq("id", trip.id);
+    if (error) {
+      toast.error("Erro ao cancelar viagem");
+    } else {
+      toast.success("Viagem cancelada");
+      onCancelled();
+    }
+  };
+
   return (
-    <motion.div
-      whileTap={{ scale: 0.98 }}
-      onClick={() => navigate("/shipments")}
-      className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border shadow-card cursor-pointer hover:shadow-elevated transition-shadow"
-    >
-      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-        <MapPin size={18} className="text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-          <span className="truncate">{trip.origin}</span>
-          <ArrowRight size={12} className="text-muted-foreground shrink-0 mx-0.5" />
-          <span className="truncate">{trip.destination}</span>
+    <>
+      <motion.div
+        whileTap={{ scale: 0.98 }}
+        onClick={() => navigate("/profile")}
+        className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border shadow-card cursor-pointer hover:shadow-elevated transition-shadow"
+      >
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <MapPin size={18} className="text-primary" />
         </div>
-        <div className="flex items-center gap-3 mt-0.5">
-          <span className="text-xs text-muted-foreground">
-            {new Date(trip.trip_date).toLocaleDateString("pt-BR")}
-          </span>
-          <span className="text-xs font-semibold text-primary">
-            R$ {trip.suggested_price}
-          </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
+            <span className="truncate">{trip.origin}</span>
+            <ArrowRight size={12} className="text-muted-foreground shrink-0 mx-0.5" />
+            <span className="truncate">{trip.destination}</span>
+          </div>
+          <div className="flex items-center gap-3 mt-0.5">
+            <span className="text-xs text-muted-foreground">
+              {new Date(trip.trip_date).toLocaleDateString("pt-BR")}
+            </span>
+            <span className="text-xs font-semibold text-primary">
+              R$ {trip.suggested_price}
+            </span>
+          </div>
         </div>
-      </div>
-      <TripRequestsBell tripId={trip.id} />
-      <ChevronRight size={16} className="text-muted-foreground shrink-0" />
-    </motion.div>
+        <div onClick={(e) => e.stopPropagation()}>
+          <TripRequestsBell tripId={trip.id} />
+        </div>
+        <button
+          className="shrink-0 p-1 text-destructive/50 hover:text-destructive transition-colors"
+          onClick={(e) => { e.stopPropagation(); setDialogOpen(true); }}
+          aria-label="Cancelar viagem"
+        >
+          <Trash2 size={14} />
+        </button>
+        <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+      </motion.div>
+
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar esta viagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As solicitações vinculadas a ela serão afetadas. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleCancel}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
