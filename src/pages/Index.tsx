@@ -16,11 +16,23 @@ import { TripRequestsBell } from "@/components/TripRequestsBell";
 import { Header } from "@/components/Header";
 import { SearchBar } from "@/components/SearchBar";
 import { BottomNav } from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Trip {
   id: string;
@@ -71,21 +83,23 @@ export default function Index() {
   const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchTrips = async () => {
     if (!user) {
       setLoading(false);
       return;
     }
-    supabase
+    const { data } = await supabase
       .from("trips")
       .select("id, origin, destination, trip_date, status, suggested_price, trip_time")
       .eq("user_id", user.id)
-      .order("trip_date", { ascending: true })
-      .then(({ data }) => {
-        setAllTrips(data || []);
-        setLoading(false);
-      });
-  }, [user]);
+      .order("trip_date", { ascending: true });
+    setAllTrips(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTrips();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Split trips
   const activeTrip = allTrips.find(
@@ -132,11 +146,11 @@ export default function Index() {
         {!loading && hasTrips && (
           <>
             {/* Active / main trip */}
-            {activeTrip && <ActiveTripCard trip={activeTrip} navigate={navigate} />}
+            {activeTrip && <ActiveTripCard trip={activeTrip} navigate={navigate} onCancelled={fetchTrips} />}
 
             {/* If no active but has upcoming, promote the first */}
             {!activeTrip && upcomingTrips.length > 0 && (
-              <ActiveTripCard trip={upcomingTrips[0]} navigate={navigate} />
+              <ActiveTripCard trip={upcomingTrips[0]} navigate={navigate} onCancelled={fetchTrips} />
             )}
 
             {/* Upcoming trips */}
@@ -170,9 +184,35 @@ export default function Index() {
   );
 }
 
+const cardTitles: Record<string, string> = {
+  in_progress: "Viagem em andamento",
+  confirmed: "Viagem confirmada",
+};
+
 /* ─────────── Active Trip Card ─────────── */
-function ActiveTripCard({ trip, navigate }: { trip: Trip; navigate: ReturnType<typeof useNavigate> }) {
+function ActiveTripCard({
+  trip,
+  navigate,
+  onCancelled,
+}: {
+  trip: Trip;
+  navigate: ReturnType<typeof useNavigate>;
+  onCancelled: () => void;
+}) {
   const badge = getStatusBadge(trip.status);
+
+  const handleCancel = async () => {
+    const { error } = await supabase
+      .from("trips")
+      .update({ status: "cancelled" })
+      .eq("id", trip.id);
+    if (error) {
+      toast.error("Erro ao cancelar viagem");
+    } else {
+      toast.success("Viagem cancelada");
+      onCancelled();
+    }
+  };
 
   return (
     <motion.section
@@ -184,7 +224,9 @@ function ActiveTripCard({ trip, navigate }: { trip: Trip; navigate: ReturnType<t
 
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-foreground text-base">Viagem em andamento</h3>
+          <h3 className="font-bold text-foreground text-base">
+            {cardTitles[trip.status] ?? "Sua próxima viagem"}
+          </h3>
           <Badge className={`text-[11px] font-semibold border ${badge.className}`}>
             {badge.label}
           </Badge>
@@ -219,21 +261,51 @@ function ActiveTripCard({ trip, navigate }: { trip: Trip; navigate: ReturnType<t
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2.5">
-          <Button
-            className="flex-1"
-            onClick={() => navigate("/shipments")}
-          >
-            Ver detalhes
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 gap-1.5"
-            onClick={() => navigate("/chat")}
-          >
-            <MessageCircle size={16} />
-            Chat
-          </Button>
+        <div className="space-y-2">
+          <div className="flex gap-2.5">
+            <Button
+              className="flex-1"
+              onClick={() => navigate("/profile")}
+            >
+              Gerenciar viagem
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 gap-1.5"
+              onClick={() => navigate("/chat")}
+            >
+              <MessageCircle size={16} />
+              Chat
+            </Button>
+          </div>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              >
+                Cancelar viagem
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancelar esta viagem?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  As solicitações vinculadas a ela serão afetadas. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Voltar</AlertDialogCancel>
+                <AlertDialogAction
+                  className={buttonVariants({ variant: "destructive" })}
+                  onClick={handleCancel}
+                >
+                  Sim, cancelar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </motion.section>
