@@ -13,6 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { validateTrip } from "@/lib/validation";
 import { ptBR } from "date-fns/locale";
 
 const packageSizes = [
@@ -40,6 +41,23 @@ export default function Publish() {
 
   const handleSubmit = async () => {
     if (!user) return;
+
+    const validation = validateTrip({
+      origin: formData.origin,
+      destination: formData.destination,
+      trip_date: formData.date,
+      package_size: formData.packageSize,
+      suggested_price: parseFloat(formData.suggestedPrice) || 0,
+    });
+    if (!validation.valid) {
+      toast({
+        title: "Verifique os dados",
+        description: validation.errors[0],
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from("trips").insert({

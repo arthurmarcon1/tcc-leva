@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Package, Loader2 } from "lucide-react";
+import { validateShipmentRequest } from "@/lib/validation";
 
 const packageSizes = [
   { id: "envelope", label: "Envelope" },
@@ -38,13 +39,17 @@ export function ShipmentRequestDialog({
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!user || !description.trim()) {
-      toast.error("Descreva o que deseja enviar");
-      return;
-    }
+    if (!user) return;
 
-    if (user.id === driverUserId) {
-      toast.error("Você não pode solicitar envio na sua própria viagem");
+    const validation = validateShipmentRequest({
+      trip_id: tripId,
+      requester_id: user.id,
+      driver_id: driverUserId,
+      description,
+      package_size: packageSize,
+    });
+    if (!validation.valid) {
+      toast.error(validation.errors[0]);
       return;
     }
 

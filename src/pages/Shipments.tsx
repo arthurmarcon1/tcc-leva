@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, Clock, CheckCircle2, XCircle, Truck, Loader2, Check, X, Star } from "lucide-react";
+import { Package, Clock, CheckCircle2, XCircle, Truck, Loader2, Check, X, Star, type LucideIcon } from "lucide-react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReviewDialog } from "@/components/ReviewDialog";
+import { STATUS_META, type ShipmentStatus } from "@/lib/validation";
 
-const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Pendente", color: "bg-accent/10 text-accent", icon: Clock },
-  accepted: { label: "Aceito", color: "bg-primary/10 text-primary", icon: Package },
-  in_transit: { label: "Em trânsito", color: "bg-primary/10 text-primary", icon: Truck },
-  delivered: { label: "Entregue", color: "bg-green-500/10 text-green-600", icon: CheckCircle2 },
-  rejected: { label: "Recusado", color: "bg-destructive/10 text-destructive", icon: XCircle },
-  cancelled: { label: "Cancelado", color: "bg-destructive/10 text-destructive", icon: XCircle },
+const statusIcons: Record<ShipmentStatus, LucideIcon> = {
+  pending: Clock,
+  accepted: Package,
+  in_transit: Truck,
+  delivered: CheckCircle2,
+  rejected: XCircle,
+  cancelled: XCircle,
 };
+
+const statusConfig = Object.fromEntries(
+  (Object.keys(STATUS_META) as ShipmentStatus[]).map((s) => [
+    s,
+    { ...STATUS_META[s], icon: statusIcons[s] },
+  ])
+) as Record<string, { label: string; color: string; icon: LucideIcon }>;
 
 interface ShipmentRequest {
   id: string;
@@ -80,7 +88,12 @@ export default function Shipments() {
     const tripMap = new Map((trips || []).map((t) => [t.id, t]));
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
-    const enrich = (r: any): ShipmentRequest => {
+    type ShipmentRequestRow = Omit<
+      ShipmentRequest,
+      "origin" | "destination" | "trip_date" | "requester_name" | "driver_name"
+    >;
+
+    const enrich = (r: ShipmentRequestRow): ShipmentRequest => {
       const trip = tripMap.get(r.trip_id);
       return {
         ...r,

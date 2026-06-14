@@ -1,6 +1,9 @@
 // __tests__/supabase-services.test.js
-// Testes dos serviços que interagem com o Supabase
-// Usa mocks para simular as respostas sem precisar de conexão real
+// Testes de contrato das chamadas ao Supabase, usando um mock do
+// query builder (sem conexão real com o banco).
+// NOTA DE ESCOPO: verificam o formato das chamadas (tabela, filtros,
+// payload), não as políticas RLS — estas são garantidas no próprio
+// banco (ver supabase/migrations).
 
 // ─── Mock do cliente Supabase ─────────────────────────────────────────────────
 

@@ -37,10 +37,10 @@ export default function Auth() {
           description: "Verifique seu email para confirmar o cadastro.",
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Erro",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
     } finally {

@@ -42,7 +42,46 @@ Diferente de plataformas tradicionais de transporte, o foco está exclusivamente
 ### Instalação
 
 ```bash
-git clone <SEU_GIT_URL>
-cd <NOME_DO_PROJETO>
+git clone https://github.com/arthurmarcon1/tcc-leva.git
+cd tcc-leva
 npm install
-npm run dev
+```
+
+### Configuração do ambiente
+
+Crie um arquivo `.env` na raiz a partir do modelo:
+
+```bash
+cp .env.example .env
+```
+
+e preencha com as credenciais do seu projeto Supabase
+(Dashboard → Project Settings → API):
+
+```
+VITE_SUPABASE_PROJECT_ID="..."
+VITE_SUPABASE_PUBLISHABLE_KEY="..."
+VITE_SUPABASE_URL="https://<projeto>.supabase.co"
+```
+
+### Banco de dados
+
+O esquema completo (tabelas, políticas de Row Level Security e
+triggers) está versionado em `supabase/migrations/`. Para criar o
+banco em um projeto Supabase novo, aplique os arquivos em ordem
+cronológica pelo SQL Editor do Dashboard, ou use a CLI:
+
+```bash
+supabase link --project-ref <PROJECT_ID>
+supabase db push
+```
+
+### Executando
+
+```bash
+npm run dev     # ambiente de desenvolvimento (http://localhost:8080)
+npm test        # testes automatizados (Jest)
+npm run lint    # análise estática
+npm run build   # build de produção
+```
+

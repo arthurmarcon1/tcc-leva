@@ -3,16 +3,25 @@ import { ArrowLeft, Shield, CheckCircle2, Mail, Phone, FileText } from "lucide-r
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
-
-const verificationSteps = [
-  { icon: Mail, label: "E-mail verificado", description: "Seu e-mail foi confirmado", completed: true },
-  { icon: Phone, label: "Telefone verificado", description: "Confirme seu número de telefone", completed: false },
-  { icon: FileText, label: "Documento de identidade", description: "Envie um documento com foto", completed: false },
-];
+import { toast } from "sonner";
 
 export default function ProfileVerification() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Etapa de e-mail reflete o estado real da conta; telefone e documento
+  // (RF04) estão previstos como evolução do sistema.
+  const emailVerified = Boolean(user?.email_confirmed_at);
+  const verificationSteps = [
+    {
+      icon: Mail,
+      label: "E-mail verificado",
+      description: emailVerified ? "Seu e-mail foi confirmado" : "Confirme o link enviado para seu e-mail",
+      completed: emailVerified,
+    },
+    { icon: Phone, label: "Telefone verificado", description: "Confirme seu número de telefone", completed: false },
+    { icon: FileText, label: "Documento de identidade", description: "Envie um documento com foto", completed: false },
+  ];
 
   const completedCount = verificationSteps.filter((s) => s.completed).length;
   const progress = (completedCount / verificationSteps.length) * 100;
@@ -67,7 +76,12 @@ export default function ProfileVerification() {
               {step.completed ? (
                 <CheckCircle2 size={22} className="text-primary" />
               ) : (
-                <button className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+                <button
+                  onClick={() =>
+                    toast.info("Esta verificação estará disponível em uma próxima versão do Leva.")
+                  }
+                  className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full"
+                >
                   Verificar
                 </button>
               )}

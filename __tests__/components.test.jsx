@@ -1,6 +1,11 @@
 // __tests__/components.test.jsx
-// Testes de componentes React do Leva
-// Usa React Testing Library para simular renderização e interações
+// Testes de comportamento de interface com React Testing Library.
+// NOTA DE ESCOPO: os componentes abaixo são versões isoladas e
+// simplificadas dos padrões de UI do Leva (badge de status, formulário
+// de solicitação etc.), definidas neste arquivo para testar o
+// comportamento sem depender de roteador, Supabase ou contexto de
+// autenticação. A lógica de negócio REAL é testada em
+// business-logic.test.jsx, que importa diretamente src/lib/validation.ts.
 
 import React, { useState } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
