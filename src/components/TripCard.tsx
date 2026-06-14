@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Package, User, ArrowRight, MessageCircle, Send } from "lucide-react";
+import { Calendar, Package, User, MessageCircle, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ interface TripCardProps {
   driverUserId?: string;
   availableSpace: string;
   suggestedPrice: string;
-  onClick?: () => void;
 }
 
 export function TripCard({
@@ -30,7 +29,6 @@ export function TripCard({
   driverUserId,
   availableSpace,
   suggestedPrice,
-  onClick,
 }: TripCardProps) {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const navigate = useNavigate();
@@ -57,8 +55,7 @@ export function TripCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="bg-card rounded-xl p-4 shadow-card border border-border cursor-pointer hover:shadow-elevated transition-all duration-300"
+      className="bg-card rounded-xl p-4 shadow-card border border-border hover:shadow-elevated transition-all duration-300"
     >
       {/* Route */}
       <div className="flex items-center gap-3 mb-4">
@@ -72,7 +69,6 @@ export function TripCard({
           <div className="h-4" />
           <p className="font-semibold text-foreground">{destination}</p>
         </div>
-        <ArrowRight className="text-muted-foreground" size={20} />
       </div>
 
       {/* Info Row */}
