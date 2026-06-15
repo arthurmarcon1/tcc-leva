@@ -5,11 +5,20 @@ import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function Settings() {
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
-  const [language, setLanguage] = useState("pt-BR");
+  const [language, setLanguage] = useState(() => localStorage.getItem("language") || "pt-BR");
+
+  const handleLanguageChange = (value: string) => {
+    setLanguage(value);
+    localStorage.setItem("language", value);
+    if (value !== "pt-BR") {
+      toast.info("Suporte a outros idiomas estará disponível em breve.");
+    }
+  };
 
   useEffect(() => {
     if (darkMode) {
@@ -61,12 +70,12 @@ export default function Settings() {
             </div>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="bg-secondary text-foreground text-sm rounded-lg px-3 py-2 border border-border"
             >
               <option value="pt-BR">Português</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
+              <option value="en">English (em breve)</option>
+              <option value="es">Español (em breve)</option>
             </select>
           </div>
         </motion.div>

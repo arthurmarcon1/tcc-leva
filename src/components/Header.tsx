@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Bell, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   title?: string;
@@ -7,6 +8,7 @@ interface HeaderProps {
 }
 
 export function Header({ title = "Leva", showLocation = true }: HeaderProps) {
+  const navigate = useNavigate();
   return (
     <header className="sticky top-0 bg-background/95 backdrop-blur-lg z-40 safe-area-top">
       <div className="flex items-center justify-between px-4 py-4">
@@ -32,6 +34,7 @@ export function Header({ title = "Leva", showLocation = true }: HeaderProps) {
         </div>
         <motion.button
           whileTap={{ scale: 0.9 }}
+          onClick={() => navigate("/profile/notifications")}
           className="relative w-11 h-11 rounded-full bg-secondary flex items-center justify-center"
         >
           <Bell size={20} className="text-foreground" />
