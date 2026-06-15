@@ -266,7 +266,7 @@ function ActiveTripCard({
           <div className="flex gap-2.5">
             <Button
               className="flex-1"
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate(`/trip/${trip.id}`)}
             >
               Gerenciar viagem
             </Button>
@@ -342,7 +342,7 @@ function UpcomingTripRow({
     <>
       <motion.div
         whileTap={{ scale: 0.98 }}
-        onClick={() => navigate("/profile")}
+        onClick={() => navigate(`/trip/${trip.id}`)}
         className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border shadow-card cursor-pointer hover:shadow-elevated transition-shadow"
       >
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
