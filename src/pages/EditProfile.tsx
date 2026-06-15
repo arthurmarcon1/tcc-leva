@@ -70,13 +70,13 @@ export default function EditProfile() {
 
     const { error } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        user_id: user.id,
         full_name: fullName.trim(),
         phone: phone.trim(),
         bio: bio.trim(),
         avatar_url: avatarUrl,
-      })
-      .eq("user_id", user.id);
+      }, { onConflict: "user_id" });
 
     setLoading(false);
 

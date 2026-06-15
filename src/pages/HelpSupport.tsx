@@ -41,6 +41,15 @@ export default function HelpSupport() {
             </button>
           ))}
         </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="text-center text-xs text-muted-foreground px-4"
+        >
+          Os canais de suporte estarão disponíveis em breve.
+        </motion.p>
       </main>
 
       <BottomNav />

@@ -29,13 +29,13 @@ const menuItems = [
 export default function Profile() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null }>({ full_name: null, avatar_url: null });
+  const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null; phone: string | null; bio: string | null }>({ full_name: null, avatar_url: null, phone: null, bio: null });
   const [unreadCount, setUnreadCount] = useState(0);
   const [realStats, setRealStats] = useState({ shipments: 0, trips: 0, rating: "—" });
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("full_name, avatar_url").eq("user_id", user.id).single().then(({ data }) => {
+    supabase.from("profiles").select("full_name, avatar_url, phone, bio").eq("user_id", user.id).single().then(({ data }) => {
       if (data) setProfile(data);
     });
     supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false).then(({ count }) => {
@@ -86,11 +86,17 @@ export default function Profile() {
             </div>
           </div>
           <h2 className="text-xl font-bold text-foreground">{displayName}</h2>
-          <p className="text-sm text-muted-foreground mb-1">{user?.email}</p>
-          <p className="text-xs text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground">{user?.email}</p>
+          {profile.phone && (
+            <p className="text-sm text-muted-foreground">{profile.phone}</p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
             Membro desde {new Date(user?.created_at || "").toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
           </p>
-          <Button variant="outline" size="sm" onClick={() => navigate("/profile/edit")}>
+          {profile.bio && (
+            <p className="text-sm text-foreground/80 mt-3 text-center leading-relaxed">{profile.bio}</p>
+          )}
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/profile/edit")}>
             Editar perfil
           </Button>
         </motion.div>
