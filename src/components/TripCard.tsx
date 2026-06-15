@@ -84,18 +84,18 @@ export function TripCard({
       </div>
 
       {/* Driver & Price */}
-      <div className="flex items-center justify-between pt-3 border-t border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 pt-3 border-t border-border">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 shrink-0 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
             {driverAvatar ? (
               <img src={driverAvatar} alt={driverName} className="w-full h-full object-cover" />
             ) : (
               <User size={18} className="text-muted-foreground" />
             )}
           </div>
-          <span className="text-sm font-medium text-foreground">{driverName}</span>
+          <span className="text-sm font-medium text-foreground truncate">{driverName}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Contribuição sugerida</p>
             <p className="font-bold text-primary">{suggestedPrice}</p>
