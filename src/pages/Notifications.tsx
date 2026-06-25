@@ -93,9 +93,9 @@ export default function Notifications() {
                 transition={{ delay: index * 0.05 }}
                 className={`bg-card rounded-xl p-4 shadow-card border border-border flex gap-3 ${!notification.read ? "border-l-4 border-l-primary" : ""}`}
               >
-                <div className="flex-1">
-                  <h4 className="font-semibold text-foreground text-sm">{notification.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-foreground text-sm line-clamp-1">{notification.title}</h4>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notification.message}</p>
                   <p className="text-xs text-muted-foreground/60 mt-2">
                     {new Date(notification.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </p>
