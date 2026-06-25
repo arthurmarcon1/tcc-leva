@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/useMessages";
 import { useAuth } from "@/hooks/useAuth";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Send } from "lucide-react";
@@ -49,7 +48,7 @@ export function ChatMessageView({ conversationId, otherUserName, otherUserAvatar
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4">
         <div className="space-y-3">
           {messages?.map((msg) => {
             const isMine = msg.sender_id === user?.id;
@@ -72,10 +71,10 @@ export function ChatMessageView({ conversationId, otherUserName, otherUserAvatar
           })}
           <div ref={scrollRef} />
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Input */}
-      <div className="p-3 border-t border-border bg-card flex gap-2">
+      {/* Input — fixo no rodapé com safe-area no mobile */}
+      <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-border bg-card flex gap-2">
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}

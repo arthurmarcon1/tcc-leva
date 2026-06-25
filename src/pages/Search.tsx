@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search as SearchIcon, X, Loader2 } from "lucide-react";
+import { Search as SearchIcon, X, Loader2, PackageSearch } from "lucide-react";
 import { Header } from "@/components/Header";
 import { TripCard } from "@/components/TripCard";
 import { BottomNav } from "@/components/BottomNav";
@@ -34,7 +34,8 @@ interface TripWithProfile {
 
 export default function Search() {
   const location = useLocation();
-  const navState = location.state as { origin?: string; destination?: string } | null;
+  const navState = location.state as { origin?: string; destination?: string; mode?: string } | null;
+  const isSendMode = navState?.mode === "send";
   const [searchQuery, setSearchQuery] = useState("");
   const [originFilter, setOriginFilter] = useState(navState?.origin || "");
   const [destinationFilter, setDestinationFilter] = useState(navState?.destination || "");
@@ -126,8 +127,21 @@ export default function Search() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <Header title="Buscar" showLocation={false} />
+      <Header title={isSendMode ? "Enviar encomenda" : "Buscar"} showLocation={false} />
       <main className="px-4 space-y-4">
+        {isSendMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3 p-3.5 rounded-xl bg-primary/8 border border-primary/20"
+          >
+            <PackageSearch size={18} className="text-primary shrink-0 mt-0.5" />
+            <p className="text-sm text-primary font-medium leading-snug">
+              Encontre uma viagem compatível com sua encomenda e clique em{" "}
+              <span className="font-bold">Enviar</span> para solicitar o transporte.
+            </p>
+          </motion.div>
+        )}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative">
           <div className="flex items-center gap-3 p-4 rounded-xl bg-card shadow-card border border-border">
             <SearchIcon size={20} className="text-muted-foreground" />

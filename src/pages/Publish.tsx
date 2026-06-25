@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { validateTrip } from "@/lib/validation";
+import { validateTrip, todayISO } from "@/lib/validation";
 import { ptBR } from "date-fns/locale";
 
 const packageSizes = [
@@ -39,6 +39,24 @@ export default function Publish() {
     notes: "",
   });
 
+  // Erro de horário: somente quando a data é hoje e o horário já passou
+  const timeError = (() => {
+    if (!formData.time || formData.date !== todayISO()) return null;
+    const [h, m] = formData.time.split(":").map(Number);
+    const chosen = new Date(); chosen.setHours(h, m, 0, 0);
+    return chosen <= new Date() ? "Este horário já passou. Escolha um horário futuro." : null;
+  })();
+
+  // Erro de preço em tempo real
+  const priceNum = parseFloat(formData.suggestedPrice);
+  const priceError = formData.suggestedPrice !== ""
+    ? priceNum < 0
+      ? "A contribuição não pode ser negativa."
+      : priceNum > 9999
+      ? "O valor máximo permitido é R$ 9.999."
+      : null
+    : null;
+
   const handleSubmit = async () => {
     if (!user) return;
 
@@ -46,6 +64,7 @@ export default function Publish() {
       origin: formData.origin,
       destination: formData.destination,
       trip_date: formData.date,
+      trip_time: formData.time || null,
       package_size: formData.packageSize,
       suggested_price: parseFloat(formData.suggestedPrice) || 0,
     });
@@ -185,7 +204,7 @@ export default function Publish() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="p-4 rounded-xl bg-card shadow-card border border-border">
+              <div className={`p-4 rounded-xl bg-card shadow-card border ${timeError ? "border-destructive" : "border-border"}`}>
                 <label className="text-xs text-muted-foreground mb-1 block">
                   Horário
                 </label>
@@ -199,10 +218,13 @@ export default function Publish() {
                 />
               </div>
             </div>
+            {timeError && (
+              <p className="text-xs text-destructive -mt-2">{timeError}</p>
+            )}
 
             <Button
               onClick={() => setStep(2)}
-              disabled={!formData.origin || !formData.destination || !formData.date}
+              disabled={!formData.origin || !formData.destination || !formData.date || !!timeError}
               className="w-full mt-4"
               size="lg"
             >
@@ -292,12 +314,15 @@ export default function Publish() {
               uma comunidade colaborativa!
             </p>
 
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-card shadow-card border border-border">
+            <div className={`flex items-center gap-3 p-4 rounded-xl bg-card shadow-card border ${priceError ? "border-destructive" : "border-border"}`}>
               <DollarSign size={20} className="text-primary" />
               <span className="text-lg font-semibold text-foreground">R$</span>
               <input
                 type="number"
                 placeholder="0"
+                min="0"
+                max="9999"
+                step="0.01"
                 value={formData.suggestedPrice}
                 onChange={(e) =>
                   setFormData({ ...formData, suggestedPrice: e.target.value })
@@ -305,12 +330,16 @@ export default function Publish() {
                 className="flex-1 bg-transparent outline-none text-2xl font-bold text-foreground placeholder:text-muted-foreground"
               />
             </div>
+            {priceError && (
+              <p className="text-xs text-destructive -mt-2">{priceError}</p>
+            )}
 
             <div className="p-4 rounded-xl bg-card shadow-card border border-border">
               <label className="text-sm text-muted-foreground mb-2 block">
                 Observações (opcional)
               </label>
               <textarea
+                maxLength={300}
                 placeholder="Ex: Aceito apenas objetos leves, disponibilidade flexível..."
                 value={formData.notes}
                 onChange={(e) =>
@@ -319,6 +348,11 @@ export default function Publish() {
                 rows={3}
                 className="w-full bg-transparent outline-none text-foreground placeholder:text-muted-foreground resize-none"
               />
+              {formData.notes.length > 220 && (
+                <p className={`text-xs text-right mt-1 ${formData.notes.length >= 300 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  {formData.notes.length}/300
+                </p>
+              )}
             </div>
 
             {/* Summary */}
@@ -348,7 +382,7 @@ export default function Publish() {
               <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                 Voltar
               </Button>
-              <Button onClick={handleSubmit} variant="hero" className="flex-1" disabled={submitting}>
+              <Button onClick={handleSubmit} variant="hero" className="flex-1" disabled={submitting || !!priceError}>
                 {submitting ? "Publicando..." : "Publicar"}
               </Button>
             </div>

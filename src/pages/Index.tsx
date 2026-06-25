@@ -415,7 +415,7 @@ function QuickActions({ navigate }: { navigate: ReturnType<typeof useNavigate> }
     {
       icon: Package,
       label: "Enviar encomenda",
-      onClick: () => navigate("/search"),
+      onClick: () => navigate("/search", { state: { mode: "send" } }),
     },
   ];
 
@@ -473,7 +473,8 @@ function TripHistory({
         {visible.map((trip) => (
           <div
             key={trip.id}
-            className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border/50"
+            onClick={() => navigate(`/trip/${trip.id}`)}
+            className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border/50 cursor-pointer hover:bg-secondary/70 transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
               <Truck size={14} className="text-muted-foreground" />

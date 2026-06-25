@@ -118,15 +118,25 @@ export default function EditProfile() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="fullName">Nome completo</Label>
-            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" />
+            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" maxLength={100} />
+            {fullName.length > 75 && (
+              <p className={`text-xs text-right ${fullName.length >= 100 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                {fullName.length}/100
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Telefone</Label>
-            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" maxLength={20} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Conte um pouco sobre você..." rows={4} />
+            <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Conte um pouco sobre você..." rows={4} maxLength={300} />
+            {bio.length > 220 && (
+              <p className={`text-xs text-right ${bio.length >= 300 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                {bio.length}/300
+              </p>
+            )}
           </div>
         </motion.div>
 

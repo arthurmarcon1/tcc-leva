@@ -10,6 +10,9 @@ import {
   Trash2,
   X,
   Check,
+  Star,
+  Users,
+  CheckCircle2,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
@@ -28,12 +31,14 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TripRequestsBell } from "@/components/TripRequestsBell";
+import { ReviewDialog } from "@/components/ReviewDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CityAutocomplete } from "@/components/CityAutocomplete";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { validateTrip } from "@/lib/validation";
+import { validateTrip, todayISO } from "@/lib/validation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -82,6 +87,22 @@ export default function TripDetail() {
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  interface Participant {
+    shipmentId: string;
+    requesterId: string;
+    requesterName: string;
+    requesterAvatar: string | null;
+    description: string;
+    status: string;
+  }
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [existingReviews, setExistingReviews] = useState<Set<string>>(new Set());
+  const [reviewTarget, setReviewTarget] = useState<{
+    shipmentId: string;
+    reviewedId: string;
+    reviewedName: string;
+  } | null>(null);
+
   const [form, setForm] = useState({
     origin: "",
     destination: "",
@@ -109,6 +130,67 @@ export default function TripDetail() {
       });
   }, [id]);
 
+  const fetchParticipants = async () => {
+    if (!id || !user) return;
+    const { data: requests } = await supabase
+      .from("shipment_requests")
+      .select("id, requester_id, description, status")
+      .eq("trip_id", id)
+      .in("status", ["accepted", "in_transit", "delivered"]);
+
+    if (!requests?.length) return;
+
+    const userIds = requests.map((r) => r.requester_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_url")
+      .in("user_id", userIds);
+
+    const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+
+    setParticipants(
+      requests.map((r) => ({
+        shipmentId: r.id,
+        requesterId: r.requester_id,
+        requesterName: profileMap.get(r.requester_id)?.full_name || "Usuário",
+        requesterAvatar: profileMap.get(r.requester_id)?.avatar_url || null,
+        description: r.description,
+        status: r.status,
+      }))
+    );
+
+    const { data: reviews } = await supabase
+      .from("reviews")
+      .select("shipment_request_id")
+      .eq("reviewer_id", user.id)
+      .in("shipment_request_id", requests.map((r) => r.id));
+
+    if (reviews) {
+      setExistingReviews(new Set(reviews.map((r) => r.shipment_request_id)));
+    }
+  };
+
+  useEffect(() => {
+    fetchParticipants();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, user]);
+
+  const editTimeError = (() => {
+    if (!editing || !form.time || form.date !== todayISO()) return null;
+    const [h, m] = form.time.split(":").map(Number);
+    const chosen = new Date(); chosen.setHours(h, m, 0, 0);
+    return chosen <= new Date() ? "Este horário já passou. Escolha um horário futuro." : null;
+  })();
+
+  const editPriceNum = parseFloat(form.suggestedPrice);
+  const editPriceError = editing && form.suggestedPrice !== ""
+    ? editPriceNum < 0
+      ? "A contribuição não pode ser negativa."
+      : editPriceNum > 9999
+      ? "O valor máximo permitido é R$ 9.999."
+      : null
+    : null;
+
   const startEditing = () => {
     if (!trip) return;
     setForm({
@@ -129,6 +211,7 @@ export default function TripDetail() {
       origin: form.origin,
       destination: form.destination,
       trip_date: form.date,
+      trip_time: form.time || null,
       package_size: form.packageSize,
       suggested_price: parseFloat(form.suggestedPrice) || 0,
     });
@@ -279,7 +362,7 @@ export default function TripDetail() {
                     <X size={14} />
                     Cancelar
                   </Button>
-                  <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1">
+                  <Button size="sm" onClick={handleSave} disabled={saving || !!editTimeError || !!editPriceError} className="gap-1">
                     <Check size={14} />
                     {saving ? "Salvando..." : "Salvar"}
                   </Button>
@@ -324,49 +407,54 @@ export default function TripDetail() {
 
             {/* Data e Horário */}
             {editing ? (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-4 rounded-xl bg-secondary/40 border border-border">
-                  <label className="text-xs text-muted-foreground mb-1 block">Data</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          "w-full justify-start text-left font-normal p-0 h-auto hover:bg-transparent",
-                          !form.date && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon size={16} className="mr-2 shrink-0" />
-                        {form.date
-                          ? format(new Date(form.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-                          : "Selecionar"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
-                        onSelect={(date) =>
-                          setForm({ ...form, date: date ? format(date, "yyyy-MM-dd") : "" })
-                        }
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                        locale={ptBR}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-secondary/40 border border-border">
+                    <label className="text-xs text-muted-foreground mb-1 block">Data</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className={cn(
+                            "w-full justify-start text-left font-normal p-0 h-auto hover:bg-transparent",
+                            !form.date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon size={16} className="mr-2 shrink-0" />
+                          {form.date
+                            ? format(new Date(form.date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
+                            : "Selecionar"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
+                          onSelect={(date) =>
+                            setForm({ ...form, date: date ? format(date, "yyyy-MM-dd") : "" })
+                          }
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          locale={ptBR}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className={`p-4 rounded-xl bg-secondary/40 border ${editTimeError ? "border-destructive" : "border-border"}`}>
+                    <label className="text-xs text-muted-foreground mb-1 block">Horário</label>
+                    <input
+                      type="time"
+                      value={form.time}
+                      onChange={(e) => setForm({ ...form, time: e.target.value })}
+                      className="w-full bg-transparent outline-none text-foreground"
+                    />
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl bg-secondary/40 border border-border">
-                  <label className="text-xs text-muted-foreground mb-1 block">Horário</label>
-                  <input
-                    type="time"
-                    value={form.time}
-                    onChange={(e) => setForm({ ...form, time: e.target.value })}
-                    className="w-full bg-transparent outline-none text-foreground"
-                  />
-                </div>
-              </div>
+                {editTimeError && (
+                  <p className="text-xs text-destructive">{editTimeError}</p>
+                )}
+              </>
             ) : (
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
@@ -432,16 +520,23 @@ export default function TripDetail() {
                 Contribuição sugerida
               </p>
               {editing ? (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-secondary/40 border border-border">
-                  <span className="text-foreground font-semibold">R$</span>
-                  <input
-                    type="number"
-                    value={form.suggestedPrice}
-                    onChange={(e) => setForm({ ...form, suggestedPrice: e.target.value })}
-                    min="0"
-                    className="flex-1 bg-transparent outline-none text-foreground font-bold text-lg"
-                  />
-                </div>
+                <>
+                  <div className={`flex items-center gap-2 p-3 rounded-xl bg-secondary/40 border ${editPriceError ? "border-destructive" : "border-border"}`}>
+                    <span className="text-foreground font-semibold">R$</span>
+                    <input
+                      type="number"
+                      value={form.suggestedPrice}
+                      onChange={(e) => setForm({ ...form, suggestedPrice: e.target.value })}
+                      min="0"
+                      max="9999"
+                      step="0.01"
+                      className="flex-1 bg-transparent outline-none text-foreground font-bold text-lg"
+                    />
+                  </div>
+                  {editPriceError && (
+                    <p className="text-xs text-destructive mt-1">{editPriceError}</p>
+                  )}
+                </>
               ) : (
                 <p className="font-bold text-lg text-primary">R$ {trip.suggested_price}</p>
               )}
@@ -451,13 +546,21 @@ export default function TripDetail() {
             <div>
               <p className="text-xs text-muted-foreground mb-2">Observações</p>
               {editing ? (
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder="Observações opcionais..."
-                  rows={3}
-                  className="w-full bg-secondary/40 rounded-xl p-3 border border-border outline-none text-foreground placeholder:text-muted-foreground resize-none text-sm"
-                />
+                <>
+                  <textarea
+                    maxLength={300}
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    placeholder="Observações opcionais..."
+                    rows={3}
+                    className="w-full bg-secondary/40 rounded-xl p-3 border border-border outline-none text-foreground placeholder:text-muted-foreground resize-none text-sm"
+                  />
+                  {form.notes.length > 220 && (
+                    <p className={`text-xs text-right mt-1 ${form.notes.length >= 300 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                      {form.notes.length}/300
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="text-sm">
                   {trip.notes ? (
@@ -470,6 +573,65 @@ export default function TripDetail() {
             </div>
           </div>
         </motion.div>
+
+        {/* Participantes da viagem */}
+        {participants.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="rounded-2xl border border-border bg-card shadow-card overflow-hidden"
+          >
+            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+              <Users size={15} className="text-muted-foreground" />
+              <h3 className="font-semibold text-foreground text-sm">Participantes da viagem</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {participants.map((p) => (
+                <div key={p.shipmentId} className="px-5 py-4 flex items-center gap-3">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={p.requesterAvatar || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                      {p.requesterName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm truncate">{p.requesterName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{p.description}</p>
+                  </div>
+                  {p.status === "delivered" && !existingReviews.has(p.shipmentId) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 shrink-0"
+                      onClick={() =>
+                        setReviewTarget({
+                          shipmentId: p.shipmentId,
+                          reviewedId: p.requesterId,
+                          reviewedName: p.requesterName,
+                        })
+                      }
+                    >
+                      <Star size={13} />
+                      Avaliar
+                    </Button>
+                  )}
+                  {p.status === "delivered" && existingReviews.has(p.shipmentId) && (
+                    <span className="flex items-center gap-1 text-xs text-green-600 font-medium shrink-0">
+                      <CheckCircle2 size={13} />
+                      Avaliado
+                    </span>
+                  )}
+                  {p.status !== "delivered" && (
+                    <span className="text-xs text-muted-foreground shrink-0 capitalize">
+                      {p.status === "accepted" ? "Aceito" : p.status === "in_transit" ? "Em trânsito" : p.status}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Excluir viagem */}
         {canEdit && (
@@ -509,6 +671,15 @@ export default function TripDetail() {
           </motion.div>
         )}
       </main>
+
+      <ReviewDialog
+        open={!!reviewTarget}
+        onOpenChange={(open) => !open && setReviewTarget(null)}
+        shipmentRequestId={reviewTarget?.shipmentId || ""}
+        reviewedId={reviewTarget?.reviewedId || ""}
+        reviewedName={reviewTarget?.reviewedName || ""}
+        onReviewSubmitted={fetchParticipants}
+      />
 
       <BottomNav />
     </div>

@@ -27,11 +27,17 @@ export function BottomNav() {
                 key={item.path}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate(item.path)}
-                className="relative -mt-6"
+                className="relative -mt-6 flex flex-col items-center"
               >
-                <div className="w-14 h-14 rounded-full gradient-primary shadow-soft flex items-center justify-center">
+                <div className={`w-14 h-14 rounded-full gradient-primary shadow-soft flex items-center justify-center transition-all ${isActive ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}>
                   <Icon size={24} className="text-primary-foreground" />
                 </div>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute -bottom-2 w-1 h-1 rounded-full bg-primary"
+                  />
+                )}
               </motion.button>
             );
           }

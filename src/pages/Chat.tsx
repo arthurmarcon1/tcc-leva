@@ -44,10 +44,10 @@ export default function Chat() {
   }, [location.state, conversations]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className={`bg-background flex flex-col ${selected ? "h-screen overflow-hidden" : "min-h-screen"}`}>
       {!selected && <Header />}
 
-      <div className="flex-1 flex flex-col" style={{ height: selected ? "100vh" : "calc(100vh - 120px)" }}>
+      <div className="flex-1 flex flex-col min-h-0">
         {selected ? (
           <ChatMessageView
             conversationId={selected.id}

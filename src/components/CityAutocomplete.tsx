@@ -19,8 +19,13 @@ export function CityAutocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const justSelected = useRef(false);
 
   useEffect(() => {
+    if (justSelected.current) {
+      justSelected.current = false;
+      return;
+    }
     if (value.length >= 1) {
       const filtered = brazilianCities.filter((city) =>
         city.toLowerCase().startsWith(value.toLowerCase())
@@ -44,6 +49,7 @@ export function CityAutocomplete({
   }, []);
 
   const handleSelect = (city: string) => {
+    justSelected.current = true;
     onChange(city);
     setIsOpen(false);
   };

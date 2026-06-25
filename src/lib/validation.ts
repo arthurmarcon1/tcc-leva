@@ -57,6 +57,7 @@ export interface TripInput {
   origin: string;
   destination: string;
   trip_date: string; // formato YYYY-MM-DD
+  trip_time?: string | null; // formato HH:MM
   package_size: string;
   suggested_price: number;
 }
@@ -69,7 +70,11 @@ export function todayISO(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-export function validateTrip(trip: TripInput, today: string = todayISO()): ValidationResult {
+export function validateTrip(
+  trip: TripInput,
+  today: string = todayISO(),
+  now: Date = new Date()
+): ValidationResult {
   const errors: string[] = [];
 
   if (!trip.origin || trip.origin.trim() === "") errors.push("Origem é obrigatória");
@@ -87,13 +92,21 @@ export function validateTrip(trip: TripInput, today: string = todayISO()): Valid
     errors.push("Data da viagem é obrigatória");
   } else if (trip.trip_date < today) {
     errors.push("A data da viagem não pode estar no passado");
+  } else if (trip.trip_date === today && trip.trip_time) {
+    const [h, m] = trip.trip_time.split(":").map(Number);
+    const chosen = new Date(now);
+    chosen.setHours(h, m, 0, 0);
+    if (chosen <= now) {
+      errors.push("O horário informado já passou. Escolha um horário futuro ou deixe em branco.");
+    }
   }
 
   if (!trip.package_size || !PACKAGE_SIZES.includes(trip.package_size as PackageSize)) {
     errors.push("Tamanho do pacote inválido");
   }
 
-  if (trip.suggested_price < 0) errors.push("Contribuição sugerida não pode ser negativa");
+  if (trip.suggested_price < 0) errors.push("A contribuição sugerida não pode ser negativa");
+  if (trip.suggested_price > 9999) errors.push("A contribuição máxima é R$ 9.999");
 
   return { valid: errors.length === 0, errors };
 }
