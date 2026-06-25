@@ -17,7 +17,14 @@ const packageLabels: Record<string, string> = {
   large: "Bagagem grande",
 };
 
-const filters = ["Hoje", "Esta semana", "Menor preço"];
+const packageFilters = [
+  { key: "envelope", label: "Envelope" },
+  { key: "small", label: "Pequeno" },
+  { key: "medium", label: "Médio" },
+  { key: "large", label: "Grande" },
+];
+
+const dateFilters = ["Hoje", "Esta semana", "Menor preço"];
 
 interface TripWithProfile {
   id: string;
@@ -30,6 +37,8 @@ interface TripWithProfile {
   user_id: string;
   driverName: string;
   driverAvatar: string | null;
+  driverRating: number | null;
+  driverRatingCount: number;
 }
 
 export default function Search() {
@@ -39,7 +48,8 @@ export default function Search() {
   const [searchQuery, setSearchQuery] = useState("");
   const [originFilter, setOriginFilter] = useState(navState?.origin || "");
   const [destinationFilter, setDestinationFilter] = useState(navState?.destination || "");
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [activeDateFilter, setActiveDateFilter] = useState<string | null>(null);
+  const [activePackageFilter, setActivePackageFilter] = useState<string | null>(null);
   const [trips, setTrips] = useState<TripWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,15 +63,15 @@ export default function Search() {
       .eq("status", "active")
       .gte("trip_date", today);
 
-    if (activeFilter === "Hoje") {
+    if (activeDateFilter === "Hoje") {
       query = query.eq("trip_date", today);
-    } else if (activeFilter === "Esta semana") {
+    } else if (activeDateFilter === "Esta semana") {
       const nextWeek = new Date();
       nextWeek.setDate(nextWeek.getDate() + 7);
       query = query.lte("trip_date", nextWeek.toISOString().split("T")[0]);
     }
 
-    if (activeFilter === "Menor preço") {
+    if (activeDateFilter === "Menor preço") {
       query = query.order("suggested_price", { ascending: true });
     } else {
       query = query.order("trip_date", { ascending: true });
@@ -70,28 +80,43 @@ export default function Search() {
     const { data: tripsData, error } = await query;
     if (error || !tripsData) { setLoading(false); return; }
 
-    // Fetch profiles for all trip user_ids
     const userIds = [...new Set(tripsData.map((t) => t.user_id))];
-    const { data: profiles } = userIds.length > 0
-      ? await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", userIds)
-      : { data: [] };
 
-    const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+    const [profilesRes, ratingsRes] = await Promise.all([
+      userIds.length > 0
+        ? supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", userIds)
+        : { data: [] },
+      userIds.length > 0
+        ? supabase.from("reviews").select("reviewed_id, rating").in("reviewed_id", userIds)
+        : { data: [] },
+    ]);
+
+    const profileMap = new Map((profilesRes.data || []).map((p) => [p.user_id, p]));
+
+    // Compute avg rating per driver
+    const ratingAcc = new Map<string, { sum: number; count: number }>();
+    for (const r of (ratingsRes.data || [])) {
+      const curr = ratingAcc.get(r.reviewed_id) ?? { sum: 0, count: 0 };
+      ratingAcc.set(r.reviewed_id, { sum: curr.sum + r.rating, count: curr.count + 1 });
+    }
 
     setTrips(
       tripsData.map((t) => {
         const p = profileMap.get(t.user_id);
+        const rd = ratingAcc.get(t.user_id);
         return {
           ...t,
           driverName: p?.full_name || "Usuário",
           driverAvatar: p?.avatar_url || null,
+          driverRating: rd ? Math.round((rd.sum / rd.count) * 10) / 10 : null,
+          driverRatingCount: rd?.count ?? 0,
         };
       })
     );
     setLoading(false);
   };
 
-  useEffect(() => { fetchTrips(); }, [activeFilter]);
+  useEffect(() => { fetchTrips(); }, [activeDateFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const channel = supabase
@@ -99,7 +124,7 @@ export default function Search() {
       .on("postgres_changes", { event: "*", schema: "public", table: "trips" }, () => fetchTrips())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [activeFilter]);
+  }, [activeDateFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredTrips = trips.filter((t) => {
     const matchesSearch = !searchQuery ||
@@ -109,7 +134,8 @@ export default function Search() {
       t.origin.toLowerCase().includes(originFilter.toLowerCase());
     const matchesDestination = !destinationFilter ||
       t.destination.toLowerCase().includes(destinationFilter.toLowerCase());
-    return matchesSearch && matchesOrigin && matchesDestination;
+    const matchesPackage = !activePackageFilter || t.package_size === activePackageFilter;
+    return matchesSearch && matchesOrigin && matchesDestination && matchesPackage;
   });
 
   const formatTripDate = (date: string, time: string | null) => {
@@ -142,6 +168,7 @@ export default function Search() {
             </p>
           </motion.div>
         )}
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative">
           <div className="flex items-center gap-3 p-4 rounded-xl bg-card shadow-card border border-border">
             <SearchIcon size={20} className="text-muted-foreground" />
@@ -178,16 +205,32 @@ export default function Search() {
           </div>
         )}
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {filters.map((filter) => (
+        {/* Date / sort filters */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+          {dateFilters.map((filter) => (
             <Button
               key={filter}
-              variant={activeFilter === filter ? "default" : "secondary"}
+              variant={activeDateFilter === filter ? "default" : "secondary"}
               size="sm"
-              onClick={() => setActiveFilter(activeFilter === filter ? null : filter)}
+              onClick={() => setActiveDateFilter(activeDateFilter === filter ? null : filter)}
               className="shrink-0"
             >
               {filter}
+            </Button>
+          ))}
+        </motion.div>
+
+        {/* Package size filters */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {packageFilters.map((pf) => (
+            <Button
+              key={pf.key}
+              variant={activePackageFilter === pf.key ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActivePackageFilter(activePackageFilter === pf.key ? null : pf.key)}
+              className="shrink-0 text-xs"
+            >
+              {pf.label}
             </Button>
           ))}
         </motion.div>
@@ -215,6 +258,8 @@ export default function Search() {
                       driverUserId={trip.user_id}
                       availableSpace={packageLabels[trip.package_size] || trip.package_size}
                       suggestedPrice={`R$ ${Number(trip.suggested_price).toFixed(0)}`}
+                      driverRating={trip.driverRating}
+                      driverRatingCount={trip.driverRatingCount}
                     />
                   </motion.div>
                 ))}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Package, User, MessageCircle, Send } from "lucide-react";
+import { Calendar, Package, User, MessageCircle, Send, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ interface TripCardProps {
   driverUserId?: string;
   availableSpace: string;
   suggestedPrice: string;
+  driverRating?: number | null;
+  driverRatingCount?: number;
 }
 
 export function TripCard({
@@ -29,6 +31,8 @@ export function TripCard({
   driverUserId,
   availableSpace,
   suggestedPrice,
+  driverRating,
+  driverRatingCount = 0,
 }: TripCardProps) {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const navigate = useNavigate();
@@ -93,7 +97,20 @@ export function TripCard({
               <User size={18} className="text-muted-foreground" />
             )}
           </div>
-          <span className="text-sm font-medium text-foreground truncate">{driverName}</span>
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-foreground truncate block">{driverName}</span>
+            {driverRating != null ? (
+              <div className="flex items-center gap-1">
+                <Star size={11} className="fill-yellow-400 text-yellow-400 shrink-0" />
+                <span className="text-xs font-semibold text-foreground">{driverRating.toFixed(1)}</span>
+                {driverRatingCount > 0 && (
+                  <span className="text-xs text-muted-foreground">({driverRatingCount})</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">Sem avaliações</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-right">

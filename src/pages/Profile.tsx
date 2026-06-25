@@ -9,6 +9,7 @@ import {
   Bell,
   HelpCircle,
   LogOut,
+  Leaf,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -31,7 +32,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null; phone: string | null; bio: string | null }>({ full_name: null, avatar_url: null, phone: null, bio: null });
   const [unreadCount, setUnreadCount] = useState(0);
-  const [realStats, setRealStats] = useState({ shipments: 0, trips: 0, rating: "—" });
+  const [realStats, setRealStats] = useState({ shipments: 0, trips: 0, rating: "—", co2: "0" });
 
   useEffect(() => {
     if (!user) return;
@@ -53,6 +54,10 @@ export default function Profile() {
         const avg = (data.reduce((s, r) => s + r.rating, 0) / data.length).toFixed(1);
         setRealStats((prev) => ({ ...prev, rating: avg }));
       }
+    });
+    supabase.from("shipment_requests").select("id", { count: "exact", head: true }).eq("driver_id", user.id).eq("status", "delivered").then(({ count }) => {
+      const kg = ((count || 0) * 2.5).toFixed(1);
+      setRealStats((prev) => ({ ...prev, co2: kg }));
     });
   }, [user]);
 
@@ -106,18 +111,19 @@ export default function Profile() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-3"
+          className="grid grid-cols-2 gap-3"
         >
           {[
             { icon: Package, label: "Envios", value: String(realStats.shipments) },
             { icon: Car, label: "Viagens", value: String(realStats.trips) },
             { icon: Star, label: "Avaliação", value: realStats.rating },
+            { icon: Leaf, label: "CO₂ economizado", value: `${realStats.co2} kg` },
           ].map((stat) => (
             <div
               key={stat.label}
               className="bg-card rounded-xl p-4 text-center shadow-card border border-border"
             >
-              <stat.icon size={20} className="text-primary mx-auto mb-2" />
+              <stat.icon size={20} className={`mx-auto mb-2 ${stat.label === "CO₂ economizado" ? "text-green-500" : "text-primary"}`} />
               <p className="text-xl font-bold text-foreground">{stat.value}</p>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
             </div>
